@@ -1,0 +1,224 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户模型
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   @default("STUDENT")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 关联关系
+  student   Student?
+  teacher   Teacher?
+  logs      Log[]
+
+  @@map("users")
+}
+
+// 学生模型
+model Student {
+  id           Int      @id @default(autoincrement())
+  studentId    String   @unique // 学号
+  name         String
+  gender       String
+  birthDate    DateTime
+  phone        String?
+  address      String?
+  parentPhone  String?
+  parentName   String?
+  admissionDate DateTime
+  graduationDate DateTime?
+  status       String   @default("ACTIVE")
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // 外键关联
+  userId       Int      @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classId      Int?
+  class        Class?   @relation(fields: [classId], references: [id])
+  
+  // 关联关系
+  enrollments  Enrollment[]
+  attendances  Attendance[]
+  grades       Grade[]
+
+  @@map("students")
+}
+
+// 教师模型
+model Teacher {
+  id          Int      @id @default(autoincrement())
+  teacherId   String   @unique // 教师编号
+  name        String
+  gender      String
+  birthDate   DateTime
+  phone       String?
+  email       String?
+  address     String?
+  hireDate    DateTime
+  department  String
+  position    String
+  status      String   @default("ACTIVE")
+  avatar      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 外键关联
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 关联关系
+  classes     Class[]
+  courses     Course[]
+  attendances Attendance[]
+
+  @@map("teachers")
+}
+
+// 班级模型
+model Class {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // 班级名称
+  grade       String   // 年级
+  description String?
+  capacity    Int      @default(50)
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 外键关联
+  teacherId   Int?
+  teacher     Teacher? @relation(fields: [teacherId], references: [id])
+
+  // 关联关系
+  students    Student[]
+  courses     Course[]
+
+  @@map("classes")
+}
+
+// 课程模型
+model Course {
+  id          Int      @id @default(autoincrement())
+  name        String
+  code        String   @unique // 课程代码
+  description String?
+  credits     Int      @default(1)
+  hours       Int      @default(16)
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 外键关联
+  teacherId   Int?
+  teacher     Teacher? @relation(fields: [teacherId], references: [id])
+  classId     Int?
+  class       Class?   @relation(fields: [classId], references: [id])
+
+  // 关联关系
+  enrollments Enrollment[]
+  grades      Grade[]
+
+  @@map("courses")
+}
+
+// 选课模型
+model Enrollment {
+  id        Int      @id @default(autoincrement())
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 外键关联
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  Int
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+// 成绩模型
+model Grade {
+  id        Int      @id @default(autoincrement())
+  score     Float
+  type      String   @default("MIDTERM")
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 外键关联
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId  Int
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId, type])
+  @@map("grades")
+}
+
+// 考勤模型
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  status    String
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 外键关联
+  studentId Int
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId Int?
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+
+  @@unique([studentId, date])
+  @@map("attendances")
+}
+
+// 通知公告模型
+model Notice {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String
+  type      String   @default("GENERAL")
+  isPublished Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notices")
+}
+
+// 系统日志模型
+model Log {
+  id        Int      @id @default(autoincrement())
+  level     String
+  message   String
+  details   String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // 外键关联
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("logs")
+} 
